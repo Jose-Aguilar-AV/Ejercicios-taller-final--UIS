@@ -1,5 +1,7 @@
 import random
 
+#empecemos
+
 class Carta:
     def __init__(self, color, valor):
         self.color = color
