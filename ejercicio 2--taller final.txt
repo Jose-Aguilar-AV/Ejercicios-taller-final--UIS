@@ -1,0 +1,122 @@
+import random
+
+class Carta:
+    def __init__(self, numero, color):
+        self.numero = numero
+        self.color = color
+
+    def __str__(self):
+        return f"{self.color} {self.numero}"
+
+class Uno:
+    def __init__(self):
+        self.colores = ["Rojo", "Verde", "Azul", "Amarillo"]
+        self.numeros = [str(num) for num in range(0, 10)]
+        self.mazo = []
+        self.jugadores = []
+        self.actual = None
+
+    def crear_mazo(self):
+        for color in self.colores:
+            for numero in self.numeros:
+                self.mazo.append(Carta(numero, color))
+
+    def mezclar_mazo(self):
+        random.shuffle(self.mazo)
+
+    def repartir_cartas_iniciales(self, num_cartas=7):
+        for jugador in self.jugadores:
+            for _ in range(num_cartas):
+                carta = self.mazo.pop()
+                jugador.recibir_carta(carta)
+
+    def iniciar_juego(self, num_jugadores):
+        self.crear_mazo()
+        self.mezclar_mazo()
+
+        for i in range(num_jugadores):
+            nombre = input(f"Ingrese el nombre del Jugador {i+1}: ")
+            jugador = Jugador(nombre)
+            self.jugadores.append(jugador)
+
+        self.actual = self.mazo.pop()
+        print(f"Comienza el juego. Carta inicial: {self.actual}")
+
+        self.repartir_cartas_iniciales()
+
+    def siguiente_jugador(self, indice_actual):
+        return (indice_actual + 1) % len(self.jugadores)
+
+    def jugar(self):
+        jugador_actual = 0
+
+        while True:
+            jugador = self.jugadores[jugador_actual]
+            print(f"\nTurno de {jugador.nombre}")
+            print(f"Carta actual: {self.actual}")
+
+            opciones = ["Jugar carta", "Obtener carta del mazo"]
+            if self.actual.numero != "0":
+                opciones.append("Saltar turno")
+
+            print("Opciones:")
+            for i, opcion in enumerate(opciones, 1):
+                print(f"{i}. {opcion}")
+
+            eleccion = int(input("Elige una opción (1-3): "))
+            if eleccion == 1:
+                jugador.mostrar_cartas()
+                num_carta = int(input("Elige el número de carta a jugar: ")) - 1
+                if 0 <= num_carta < len(jugador.cartas):
+                    carta_jugada = jugador.jugar_carta(num_carta, self.actual)
+                    if carta_jugada:
+                        self.actual = carta_jugada
+                        if not jugador.cartas:
+                            print(f"\n¡{jugador.nombre} ha ganado! ¡Felicidades!")
+                            break
+                else:
+                    print("¡Elige un número válido de carta!")
+
+            elif eleccion == 2:
+                carta_robar = self.mazo.pop()
+                jugador.recibir_carta(carta_robar)
+                print(f"{jugador.nombre} robó una carta: {carta_robar}")
+
+            elif eleccion == 3:
+                print(f"{jugador.nombre} ha saltado el turno.")
+
+            jugador_actual = self.siguiente_jugador(jugador_actual)
+
+class Jugador:
+    def __init__(self, nombre):
+        self.nombre = nombre
+        self.cartas = []
+
+    def recibir_carta(self, carta):
+        self.cartas.append(carta)
+
+    def mostrar_cartas(self):
+        print(f"\nCartas de {self.nombre}:")
+        for i, carta in enumerate(self.cartas, 1):
+            print(f"{i}. {carta}")
+
+    def jugar_carta(self, indice_carta, carta_actual):
+        carta_jugada = self.cartas[indice_carta]
+        if carta_jugada.color == carta_actual.color or carta_jugada.numero == carta_actual.numero:
+            del self.cartas[indice_carta]
+            print(f"{self.nombre} juega {carta_jugada}")
+            return carta_jugada
+        else:
+            print("¡Carta inválida! Debes jugar una carta del mismo color o número.")
+            return None
+
+if __name__ == "__main__":
+    num_jugadores = int(input("Ingrese el número de jugadores (2-10): "))
+    if 2 <= num_jugadores <= 10:
+        juego = Uno()
+        juego.iniciar_juego(num_jugadores)
+        juego.jugar()
+    else:
+        print("El número de jugadores debe estar entre 2 y 10.")
+
+
