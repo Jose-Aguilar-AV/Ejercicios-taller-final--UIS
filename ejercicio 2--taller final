@@ -1,0 +1,149 @@
+import random
+
+class Carta:
+    def __init__(self, color, valor):
+        self.color = color
+        self.valor = valor
+
+    def __str__(self):
+        return f"{self.valor}. {self.color} {self.valor}"
+
+class Mazo:
+    def __init__(self):
+        self.cartas = []
+
+    def crear_mazo(self):
+        colores = ['Rojo', 'Azul', 'Verde', 'Amarillo']
+        valores = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Saltar', 'Reversa', 'Toma 2', 'Cambio de color', 'Toma 4', 'Salto Global', 'Saltar Turno']
+        for color in colores:
+            for valor in valores:
+                self.cartas.append(Carta(color, valor))
+
+    def mezclar(self):
+        random.shuffle(self.cartas)
+
+class Jugador:
+    def __init__(self, nombre):
+        self.nombre = nombre
+        self.mano = []
+        self.saltar_turno = False
+
+    def recibir_carta(self, carta):
+        self.mano.append(carta)
+
+    def mostrar_mano(self):
+        print(f"Mano de {self.nombre}:")
+        for i, carta in enumerate(self.mano, 1):
+            print(f"{i}. {carta}")
+
+class Uno:
+    def __init__(self, jugadores):
+        self.mazo = Mazo()
+        self.jugadores = [Jugador(nombre) for nombre in jugadores]
+        self.turno = 0
+        self.sentido = 1
+        self.cartas_en_juego = []
+
+    def repartir_cartas(self):
+        self.mazo.crear_mazo()
+        self.mazo.mezclar()
+        for _ in range(7):
+            for jugador in self.jugadores:
+                carta = self.mazo.cartas.pop()
+                jugador.recibir_carta(carta)
+
+    def siguiente_jugador(self):
+        self.turno = (self.turno + self.sentido) % len(self.jugadores)
+
+    def mostrar_carta_en_juego(self):
+        if self.cartas_en_juego:
+            carta_actual = self.cartas_en_juego[-1]
+            print(f"Carta en juego: {carta_actual}")
+        else:
+            print("No hay cartas en juego.")
+
+    def tomar_carta_del_mazo(self, jugador, cantidad):
+        for _ in range(cantidad):
+            carta = self.mazo.cartas.pop()
+            jugador.recibir_carta(carta)
+
+    def jugar(self):
+        self.repartir_cartas()
+
+        # Elegir la carta inicial para comenzar el juego
+        carta_inicial = self.mazo.cartas.pop()
+        self.cartas_en_juego.append(carta_inicial)
+
+        carta_salto_global_usada = False
+
+        while True:
+            jugador_actual = self.jugadores[self.turno]
+            print(f"\nTurno de {jugador_actual.nombre}:")
+            self.mostrar_carta_en_juego()
+            jugador_actual.mostrar_mano()
+
+            carta_valida = False
+            while not carta_valida:
+                indice_carta = int(input(f"Elije el número de la carta a jugar (1-{len(jugador_actual.mano)}): ")) - 1
+                if 0 <= indice_carta < len(jugador_actual.mano):
+                    carta_seleccionada = jugador_actual.mano[indice_carta]
+
+                    if carta_seleccionada.color == self.cartas_en_juego[-1].color or carta_seleccionada.valor == self.cartas_en_juego[-1].valor or carta_seleccionada.color == 'Cambio de color' or (carta_seleccionada.valor == 'Saltar Turno' and not jugador_actual.saltar_turno):
+                        carta_valida = True
+                    else:
+                        print("Carta inválida. Debes jugar una carta del mismo color, con el mismo valor o usar una carta 'Cambio de color' o 'Saltar Turno'.")
+                else:
+                    print("Número de carta inválido. Inténtalo de nuevo.")
+
+            if carta_seleccionada.color == 'Cambio de color':
+                nuevo_color = input("Selecciona un nuevo color (Rojo, Azul, Verde, Amarillo): ")
+                carta_seleccionada.color = nuevo_color
+
+            self.cartas_en_juego.append(carta_seleccionada)
+            jugador_actual.mano.pop(indice_carta)
+
+            if not jugador_actual.mano:
+                print(f"¡{jugador_actual.nombre} ha ganado!")
+                break
+
+            if carta_seleccionada.valor == 'Reversa':
+                self.sentido *= -1
+
+            if carta_seleccionada.valor == 'Saltar Turno':
+                jugador_actual.saltar_turno = True
+
+            if carta_seleccionada.valor == 'Toma 2':
+                for _ in range(2):
+                    siguiente_jugador = self.jugadores[(self.turno + self.sentido) % len(self.jugadores)]
+                    carta = self.mazo.cartas.pop()
+                    siguiente_jugador.recibir_carta(carta)
+
+            if carta_seleccionada.valor == 'Toma 4':
+                for _ in range(4):
+                    siguiente_jugador = self.jugadores[(self.turno + self.sentido) % len(self.jugadores)]
+                    carta = self.mazo.cartas.pop()
+                    siguiente_jugador.recibir_carta(carta)
+
+            if carta_seleccionada.valor == 'Salto Global' and not carta_salto_global_usada:
+                for jugador in self.jugadores:
+                    carta = self.mazo.cartas.pop()
+                    jugador.recibir_carta(carta)
+                carta_salto_global_usada = True
+
+            # Todos los jugadores reciben una carta adicional en la mesa
+            if carta_seleccionada.valor == 'Salto Global':
+                for jugador in self.jugadores:
+                    carta = self.mazo.cartas.pop()
+                    self.cartas_en_juego.append(carta)
+
+            self.siguiente_jugador()
+
+if __name__ == "__main__":
+    num_jugadores = int(input("Ingrese el número de jugadores (2-6): "))
+    if num_jugadores < 2 or num_jugadores > 6:
+        print("Número de jugadores inválido.")
+    else:
+        jugadores = [input(f"Ingrese el nombre del jugador {i+1}: ") for i in range(num_jugadores)]
+        juego = Uno(jugadores)
+        juego.jugar()
+
